@@ -42,7 +42,10 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.UUID;
@@ -104,8 +107,7 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
             Log.e("read","fail");
         }
-
-
+        if(Usbexist()==0) UsbLink();
 
         FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -250,13 +252,8 @@ public class MainActivity extends AppCompatActivity {
                     }
                     break;
                 case UsbManager.ACTION_USB_DEVICE_ATTACHED:
-                    mUsbmanager = (UsbManager) getSystemService(Context.USB_SERVICE);
-                    mUsbDevice = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
-                    if(!mUsbmanager.hasPermission(mUsbDevice)) {
-                        PendingIntent permissionIntent = PendingIntent.getBroadcast(context, 0, new Intent(ACTION_USB_PERMISSION), 0);
-                        mUsbmanager.requestPermission(mUsbDevice, permissionIntent);
-                        break;
-                    }
+                    if(Usbexist()==0) UsbLink();
+                    break;
                 case ACTION_USB_PERMISSION:
 //                    Log.e("usb","link");
                     if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, true)) {
@@ -314,11 +311,37 @@ public class MainActivity extends AppCompatActivity {
             } catch (IOException e) { }
         }
     };
+    public int Usbexist(){
+        int back=9;
+        try {
+            Context context = getBaseContext();
+            mUsbmanager = (UsbManager) getSystemService(Context.USB_SERVICE);
+            HashMap<String, UsbDevice> deviceList = mUsbmanager.getDeviceList();
+            Iterator<UsbDevice> deviceIterator = deviceList.values().iterator();
+            while (deviceIterator.hasNext()) {
+                mUsbDevice = deviceIterator.next();
+                // 在这里添加处理设备的代码
+//                Log.e("USB", mUsbDevice.getVendorId() + ":" + mUsbDevice.getProductId());
+                if (mUsbDevice.getVendorId() == 1155 && mUsbDevice.getProductId() == 22336) {
+//                    Log.e("USB", "exist");
+                    back=1;
+                    if (!mUsbmanager.hasPermission(mUsbDevice)) {
+                        PendingIntent permissionIntent = PendingIntent.getBroadcast(context, 0, new Intent(ACTION_USB_PERMISSION), 0);
+                        mUsbmanager.requestPermission(mUsbDevice, permissionIntent);
+                    }else back = 0;
+                }
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        Log.e("USB",""+back);
+        return back;
+    }
     public void UsbLink(){
         try {
             mUsbmanager = (UsbManager) getSystemService(Context.USB_SERVICE);
             //启动连接线程
-            usbconnectThread = new USBConnectThread(mUsbmanager, true);
+            usbconnectThread = new USBConnectThread(mUsbmanager, mUsbDevice);
             Thread Tssa = new Thread(usbconnectThread);
             Tssa.start();
         } catch (Exception e) { }
@@ -331,8 +354,10 @@ public class MainActivity extends AppCompatActivity {
                 EventBus.getDefault().post(new SwitchEvent(1, true));
                 break;
             case 1:
+                EventBus.getDefault().post(new ScaleEvent(1,event.msg));
             case 21:
-                EventBus.getDefault().post(new MessageEvent(event.msg));
+//                EventBus.getDefault().post(new MessageEvent(event.msg));
+                EventBus.getDefault().post(new ScaleEvent(2,event.msg));
                 break;
             case 2:
                 EventBus.getDefault().post(new MessageEvent("蓝牙连接关闭"));
@@ -375,6 +400,8 @@ public class MainActivity extends AppCompatActivity {
     @Subscribe
     public void onScaleEvent(ScaleEvent event) {
         if(event.config==0){
+            EventBus.getDefault().post(new ScaleEvent(1,""));
+            EventBus.getDefault().post(new ScaleEvent(2,""));
             try {
                 String msg="{\"t\":\""+formatter.format(new Date(System.currentTimeMillis()))+"\",\"scale\":\"1\"}";
                 EventBus.getDefault().post(new ConnectEvent(11,msg));

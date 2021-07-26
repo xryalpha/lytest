@@ -18,10 +18,10 @@ import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
 public class FirstFragment extends Fragment {
-    private TextView tv1;
+    private TextView tv1,sc1,sc2;
     private Switch sw1,sw2;
     boolean swset;
-    String tv1s="";
+    String tv1s="",sc1s="",sc2s="";
     @Override
     public View onCreateView(
             LayoutInflater inflater, ViewGroup container,
@@ -35,6 +35,8 @@ public class FirstFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         EventBus.getDefault().register(this);
         tv1=view.findViewById(R.id.textView);
+        sc1=view.findViewById(R.id.textView2);
+        sc2=view.findViewById(R.id.textView3);
         sw1=view.findViewById(R.id.switch1);
         sw2=view.findViewById(R.id.switch2);
         view.findViewById(R.id.button_first).setOnClickListener(new View.OnClickListener() {
@@ -82,6 +84,29 @@ public class FirstFragment extends Fragment {
                 @Override
                 public void run() {
                     sw1.setChecked(swset);
+                }
+            });
+        }
+    }
+    @Subscribe
+    public void onScaleEvent(ScaleEvent event) {
+        if (event.config == 1){
+            GsonB mGb= GsonB.objectFromData(event.callback);
+            sc1s="蓝牙量表："+mGb.getV()+"，单位："+mGb.getP()+",时间："+mGb.getT();
+            sc1.post(new Runnable() {
+                @Override
+                public void run() {
+                    sc1.setText(sc1s);
+                }
+            });
+        }
+        if (event.config == 2){
+            GsonB mGb= GsonB.objectFromData(event.callback);
+            sc2s="USB量表："+mGb.getV()+"，单位："+mGb.getP()+",时间："+mGb.getT();
+            sc2.post(new Runnable() {
+                @Override
+                public void run() {
+                    sc2.setText(sc2s);
                 }
             });
         }
